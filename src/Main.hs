@@ -1,22 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 module Main (main) where
 
 
-
 import Control.Concurrent
+import Control.Lens hiding (element)
 import Control.Monad
-import qualified Data.Vector as Vector
-
-import qualified Data.Map.Strict as Map
 import Linear
-import SDL.Video (createWindow, defaultWindow, createRenderer)
-import SDL.Video.Renderer
+import Linear.Affine
+import qualified Data.Map.Strict as Map
+import qualified Data.Vector as Vector
 import SDL.Event
 import SDL.Init (initializeAll)
 import SDL.Input
+import SDL.Video (createWindow, defaultWindow, createRenderer)
+import SDL.Video.Renderer
 
 import Time
-import Types
+import Types hiding (Event)
+import qualified Types as T
 import Render
 import Game
 
@@ -28,7 +31,7 @@ main = do
     renderer <- createRenderer window (-1) defaultRenderer
 
     state <- newMVar $ State units' buildings'
-    input <- newMVar $ Input Map.empty
+    input <- newMVar $ emptyInput
 
     run renderDelta $ render renderer state
     run gameDelta $ game input state
@@ -55,18 +58,31 @@ updateInput :: Event -> Input -> Input
 updateInput event input =
     case eventPayload event of
         KeyboardEvent keyboardEvent ->
-            Input $ case keyboardEventKeyMotion keyboardEvent of
-                Pressed -> Map.insert scanCode () keys
-                Released -> Map.delete scanCode keys
+            case keyboardEventKeyMotion keyboardEvent of
+                Pressed -> modifyKyeboard $ Map.insert scanCode ()
+                Released -> modifyKyeboard $ Map.delete scanCode
               where scanCode = keysymScancode $ keyboardEventKeysym keyboardEvent
+        MouseMotionEvent MouseMotionEventData{..} ->
+            modifyEvents ([MouseMove
+                (mousePosToV2 mouseMotionEventPos)
+                (fmap buttonToButton mouseMotionEventState)] ++)
         _ -> input
   where
-    keys = keyboard input
+    buttonToButton :: MouseButton -> Button
+    buttonToButton = \case
+        ButtonLeft -> LeftButton
+        ButtonMiddle -> RightButton
+        ButtonRight -> MiddleButton
+        _ -> T.Unknown
+
+    mousePosToV2 (P vect) = fmap fromIntegral vect
+    modifyKyeboard f = over (properties . keyboard) f input
+    modifyEvents f = over (events) f input
 
 pollInput :: MVar Input -> IO ()
 pollInput input = do
-    events <- pollEvents
-    let update = foldl comp id events
+    es <- pollEvents
+    let update = foldl comp id es
     modifyMVar_ input (return . update)
   where
     comp up ev = updateInput ev . up
