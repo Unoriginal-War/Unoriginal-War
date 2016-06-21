@@ -5,6 +5,7 @@ module Main (main) where
 
 import Control.Concurrent
 import Control.Monad
+import qualified Data.Vector as Vector
 
 import qualified Data.Map.Strict as Map
 import Linear
@@ -26,7 +27,7 @@ main = do
     window <- createWindow "My SDL Application" defaultWindow
     renderer <- createRenderer window (-1) defaultRenderer
 
-    state <- newMVar $ State 300 0
+    state <- newMVar $ State units buildings
     input <- newMVar $ Input Map.empty
 
     run renderDelta $ render renderer state
@@ -37,6 +38,15 @@ main = do
     renderDelta = 0.01 -- 100 FPS
     gameDelta = 0.001  -- 1000 FPS
     inputDelta = 0.001 -- 1000 FPS
+
+    buildings = Vector.fromList
+        [ Building 300 128 200
+        ]
+
+    units = Vector.fromList
+        [ Unit (V2 500 200) 255 50
+        , Unit (V2 600 200) 255 50
+        ]
 
 updateInput :: Event -> Input -> Input
 updateInput event input =
