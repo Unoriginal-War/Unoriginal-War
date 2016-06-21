@@ -17,8 +17,19 @@ cabal-version:       >=1.10
 
 executable unoriginal-war
   main-is:             Main.hs
-  -- other-modules:
+  other-modules:
+                       Game
+                       Types
+                       Render
+                       Time
+
   -- other-extensions:
+
   build-depends:       base >=4.8 && <4.9
+                     , sdl2
+                     , linear
+                     , time
+                     , containers
+
   hs-source-dirs:      src
   default-language:    Haskell2010
