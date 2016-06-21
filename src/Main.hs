@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 module Main (main) where
 
@@ -7,21 +8,25 @@ module Main (main) where
 import Control.Concurrent
 import Control.Lens hiding (element)
 import Control.Monad
+import Foreign.C
 import Linear
 import Linear.Affine
 import qualified Data.Map.Strict as Map
 import qualified Data.Vector as Vector
+import SDL.Cairo
+import SDL.Cairo.Canvas
 import SDL.Event
 import SDL.Init (initializeAll)
 import SDL.Input
 import SDL.Video (createWindow, defaultWindow, createRenderer)
 import SDL.Video.Renderer
 
+import Game
+import Item
+import Render
 import Time
 import Types hiding (Event)
 import qualified Types as T
-import Render
-import Game
 
 
 main :: IO ()
@@ -30,8 +35,12 @@ main = do
     window <- createWindow "My SDL Application" defaultWindow
     renderer <- createRenderer window (-1) defaultRenderer
 
-    state <- newMVar $ State units' buildings'
-    input <- newMVar $ emptyInput
+    loadedUnits <- sequence $ Vector.map (loadTexture renderer size) units'
+    loadedBuildings <-
+        sequence $ Vector.map (loadTexture renderer bSize) buildings'
+
+    state <- newMVar $ State loadedUnits loadedBuildings
+    input <- newMVar emptyInput
 
     run renderDelta $ render renderer state
     run gameDelta $ game input state
@@ -42,16 +51,70 @@ main = do
     gameDelta = 0.001  -- 1000 FPS
     inputDelta = 0.001 -- 1000 FPS
 
+    makeTexture :: Renderer -> Size -> FilePath -> IO Texture
+    makeTexture renderer size' name = do
+        texture <- createCairoTexture renderer (V2 iSize iSize)
+        withCanvas texture $ do
+            buildingImage <- loadImagePNG name
+            image' buildingImage (D 0 0 dSize dSize)
+        pure texture
+      where
+        iSize = CInt $ fromIntegral size'
+        dSize = fromIntegral size'
+
+    loadTexture
+        :: Renderer
+        -> (Features a -> Size)
+        -> Item a
+        -> IO (Item a)
+    loadTexture renderer getSize u@Item{description} = do
+        texture <- makeTexture renderer size' name
+        pure u
+            { resources = Resources
+                { texture = Just texture
+                }
+            }
+      where
+        size' = getSize $ features description
+        name = textureFile $ sources description
+
     buildings' = Vector.fromList
-        [ Building 300 (StaticInfo 128 200 0)
-        , Building 500 (StaticInfo 200 100 0)
+        [ Item
+            { description = Description
+                { features = BuildingFeatures 200
+                , sources = Sources
+                    { textureFile = "image/building.png"
+                    }
+                }
+            , resources = Resources
+                { texture = Nothing
+                }
+            , Item.properties = BuildingProperties
+                { bPosition = V2 200 200
+                }
+            }
         ]
 
     units' = Vector.fromList
-        [ Unit (V2 500 200) (StaticInfo 255 50 0.5)
-          (cycle [MoveTo $ V2 200 400, MoveTo $ V2 500 200, MoveTo $ V2 500 500])
-        , Unit (V2 600 200) (StaticInfo 255 20 2)
-          (cycle [MoveTo $ V2 200 400, MoveTo $ V2 600 200])
+        [ Item
+            { description = Description
+                { features = UnitFeatures 0.5 50
+                , sources = Sources
+                    { textureFile = "image/unit.png"
+                    }
+                }
+            , resources = Resources
+                { texture = Nothing
+                }
+            , Item.properties = UnitProperties
+                { position = V2 500 200
+                , plan = cycle
+                    [ MoveTo $ V2 200 400
+                    , MoveTo $ V2 500 200
+                    , MoveTo $ V2 500 500
+                    ]
+                }
+            }
         ]
 
 updateInput :: Event -> Input -> Input
@@ -76,7 +139,7 @@ updateInput event input =
         _ -> T.Unknown
 
     mousePosToV2 (P vect) = fmap fromIntegral vect
-    modifyKyeboard f = over (properties . keyboard) f input
+    modifyKyeboard f = over (Types.properties . keyboard) f input
     modifyEvents f = over (events) f input
 
 pollInput :: MVar Input -> IO ()

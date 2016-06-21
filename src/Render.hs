@@ -1,57 +1,50 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RecordWildCards #-}
 module Render
     ( render )
 where
 
 import Control.Concurrent
+import Data.Maybe
 import Data.Monoid ((<>))
 import qualified Data.Vector as Vector
 import Foreign.C.Types
 import Linear (V4(..), V2(..))
 import Linear.Affine (Point(..))
 import SDL (($=))
-import SDL.Cairo
-import SDL.Cairo.Canvas
 import SDL.Video.Renderer
 
-import Types
+import Item
 
 
 makeRect :: (Num a) => Point V2 a -> a -> Rectangle a
 makeRect (P (V2 x y)) h = Rectangle (P $ V2 (x - h) (y - h)) (V2 h h)
 
 unitToInfo :: Unit -> RenderingInfo
-unitToInfo Unit{..} = RenderingInfo
-    { position = unitPosition
-    , color = staticColor unitStatic
-    , size = staticSize unitStatic
+unitToInfo Item{..} = RenderingInfo
+    { rPosition = position properties
+    , rTexture = fromJust $ texture resources
+    , rSize = size $ features description
     }
 
 buildingToInfo :: Building -> RenderingInfo
-buildingToInfo Building{..} = RenderingInfo
-    { position = buildingPosition
-    , color = staticColor buildingStatic
-    , size = staticSize buildingStatic
+buildingToInfo Item{..} = RenderingInfo
+    { rPosition = bPosition properties
+    , rTexture = fromJust $ texture resources
+    , rSize = bSize $ features description
     }
 
-renderEntity :: Renderer -> RenderingInfo -> IO ()
-renderEntity renderer RenderingInfo{..} = do
+renderItem :: Renderer -> RenderingInfo -> IO ()
+renderItem renderer RenderingInfo{..} = do
     let toCInt = CInt . fromIntegral . myRound
-    let iPos = fmap toCInt position
+    let iPos = fmap toCInt rPosition
 
-    texture <- createCairoTexture renderer (V2 iSize iSize)
-    withCanvas texture $ do
-        buildingImage <- loadImagePNG "./image/building.png"
-        image' buildingImage (D 0 0 dSize dSize)
-
-    copy renderer texture Nothing (Just $ makeRect (P iPos) iSize)
+    copy renderer rTexture Nothing (Just $ makeRect (P iPos) iSize)
   where
     myRound :: RealFrac a => a -> Integer
     myRound = round
 
-    iSize = CInt $ fromIntegral size
-    dSize :: Double
-    dSize = fromIntegral size
+    iSize = CInt $ fromIntegral rSize
 
 render :: Renderer -> MVar State -> IO ()
 render renderer state = do
@@ -66,7 +59,7 @@ render renderer state = do
     rendererDrawColor renderer $= V4 0 0 0 255
     clear renderer
 
-    sequence_ $ Vector.map (renderEntity renderer) (unitsInfo <> buildingsInfo)
+    sequence_ $ Vector.map (renderItem renderer) (unitsInfo <> buildingsInfo)
 
     present renderer
 
