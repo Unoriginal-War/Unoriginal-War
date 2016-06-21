@@ -9,8 +9,10 @@ import qualified Data.Vector as Vector
 import Foreign.C.Types
 import Linear (V4(..), V2(..))
 import Linear.Affine (Point(..))
-import SDL.Video.Renderer
 import SDL (($=))
+import SDL.Cairo
+import SDL.Cairo.Canvas
+import SDL.Video.Renderer
 
 import Types
 
@@ -36,11 +38,20 @@ renderEntity :: Renderer -> RenderingInfo -> IO ()
 renderEntity renderer RenderingInfo{..} = do
     let toCInt = CInt . fromIntegral . myRound
     let iPos = fmap toCInt position
-    rendererDrawColor renderer $= color
-    fillRect renderer $ Just $ makeRect (P iPos) (CInt $ fromIntegral size)
+
+    texture <- createCairoTexture renderer (V2 iSize iSize)
+    withCanvas texture $ do
+        buildingImage <- loadImagePNG "./image/building.png"
+        image' buildingImage (D 0 0 dSize dSize)
+
+    copy renderer texture Nothing (Just $ makeRect (P iPos) iSize)
   where
     myRound :: RealFrac a => a -> Integer
     myRound = round
+
+    iSize = CInt $ fromIntegral size
+    dSize :: Double
+    dSize = fromIntegral size
 
 render :: Renderer -> MVar State -> IO ()
 render renderer state = do

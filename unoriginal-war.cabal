@@ -27,12 +27,14 @@ executable unoriginal-war
   -- other-extensions:
 
   build-depends:
-      base >=4.8 && <4.9
-   , sdl2
-   , linear
-   , time
+     base >=4.8 && <4.9
+   , cairo
    , containers
    , lens
+   , linear
+   , sdl2
+   , sdl2-cairo
+   , time
    , vector
 
   hs-source-dirs:      src

@@ -2,5 +2,6 @@ flags: {}
 extra-package-dbs: []
 packages:
 - '.'
-extra-deps: []
+extra-deps:
+- sdl2-cairo-0.1.0.2
 resolver: lts-6.3
