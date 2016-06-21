@@ -4,9 +4,7 @@ module Render
 where
 
 import Control.Concurrent
-import Control.Monad
 import Data.Monoid ((<>))
-import Data.Time.Clock
 import qualified Data.Vector as Vector
 import Foreign.C.Types
 import Linear (V4(..), V2(..))
@@ -14,7 +12,6 @@ import Linear.Affine (Point(..))
 import SDL.Video.Renderer
 import SDL (($=))
 
-import Time
 import Types
 
 
@@ -24,23 +21,26 @@ makeRect (P (V2 x y)) h = Rectangle (P $ V2 (x - h) (y - h)) (V2 h h)
 unitToInfo :: Unit -> RenderingInfo
 unitToInfo Unit{..} = RenderingInfo
     { position = unitPosition
-    , color = unitColor
-    , size = unitSize
+    , color = staticColor unitStatic
+    , size = staticSize unitStatic
     }
 
 buildingToInfo :: Building -> RenderingInfo
 buildingToInfo Building{..} = RenderingInfo
     { position = buildingPosition
-    , color = buildingColor
-    , size = buildingSize
+    , color = staticColor buildingStatic
+    , size = staticSize buildingStatic
     }
 
 renderEntity :: Renderer -> RenderingInfo -> IO ()
 renderEntity renderer RenderingInfo{..} = do
-    let toCInt = CInt . fromIntegral . round
+    let toCInt = CInt . fromIntegral . myRound
     let iPos = fmap toCInt position
     rendererDrawColor renderer $= color
     fillRect renderer $ Just $ makeRect (P iPos) (CInt $ fromIntegral size)
+  where
+    myRound :: RealFrac a => a -> Integer
+    myRound = round
 
 render :: Renderer -> MVar State -> IO ()
 render renderer state = do
@@ -48,6 +48,9 @@ render renderer state = do
 
     let unitsInfo = Vector.map unitToInfo (units s)
     let buildingsInfo = Vector.map buildingToInfo (buildings s)
+
+    -- Debug unit positions
+    -- forM_ (units s) $ \unit -> print $ unitPosition unit
 
     rendererDrawColor renderer $= V4 0 0 0 255
     clear renderer

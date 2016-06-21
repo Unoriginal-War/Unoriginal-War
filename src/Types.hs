@@ -1,9 +1,12 @@
 module Types
-    ( Building(..)
+    ( Action(..)
+    , Building(..)
     , DTime
     , Input(..)
+    , Position
     , RenderingInfo(..)
     , State(..)
+    , StaticInfo(..)
     , Unit(..)
     )
 where
@@ -19,6 +22,13 @@ import SDL.Input (Scancode)
 type Position = V2 Float
 type Color = V4 Word8
 type Size = Word8
+type Speed = Float
+
+data StaticInfo = StaticInfo
+    { staticColor :: Color
+    , staticSize :: Size
+    , staticSpeed :: Speed
+    }
 
 data RenderingInfo = RenderingInfo
     { position :: Position
@@ -26,16 +36,17 @@ data RenderingInfo = RenderingInfo
     , size :: Size
     }
 
+data Action = MoveTo Position
+
 data Unit = Unit
     { unitPosition :: Position
-    , unitColor :: Color
-    , unitSize :: Size
+    , unitStatic :: StaticInfo
+    , unitPlan :: [Action]
     }
 
 data Building = Building
     { buildingPosition :: Position
-    , buildingColor :: Color
-    , buildingSize :: Size
+    , buildingStatic :: StaticInfo
     }
 
 data State = State

@@ -27,7 +27,7 @@ main = do
     window <- createWindow "My SDL Application" defaultWindow
     renderer <- createRenderer window (-1) defaultRenderer
 
-    state <- newMVar $ State units buildings
+    state <- newMVar $ State units' buildings'
     input <- newMVar $ Input Map.empty
 
     run renderDelta $ render renderer state
@@ -39,13 +39,16 @@ main = do
     gameDelta = 0.001  -- 1000 FPS
     inputDelta = 0.001 -- 1000 FPS
 
-    buildings = Vector.fromList
-        [ Building 300 128 200
+    buildings' = Vector.fromList
+        [ Building 300 (StaticInfo 128 200 0)
+        , Building 500 (StaticInfo 200 100 0)
         ]
 
-    units = Vector.fromList
-        [ Unit (V2 500 200) 255 50
-        , Unit (V2 600 200) 255 50
+    units' = Vector.fromList
+        [ Unit (V2 500 200) (StaticInfo 255 50 0.5)
+          (cycle [MoveTo $ V2 200 400, MoveTo $ V2 500 200, MoveTo $ V2 500 500])
+        , Unit (V2 600 200) (StaticInfo 255 20 2)
+          (cycle [MoveTo $ V2 200 400, MoveTo $ V2 600 200])
         ]
 
 updateInput :: Event -> Input -> Input

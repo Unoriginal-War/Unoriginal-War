@@ -10,7 +10,7 @@ import Types
 
 
 timeToMicro :: DTime -> Int
-timeToMicro = round . (* 10^6)
+timeToMicro = round . (* 10^(6 :: Int))
 
 step :: DTime -> IO a -> IO (Maybe DTime)
 step delta comp = do
