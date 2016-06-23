@@ -33,7 +33,6 @@ data Button =
     LeftButton
     | RightButton
     | MiddleButton
-    | Unknown
   deriving (Show)
 
 -- We should change the name according the event use to enable better mapping ;)
@@ -44,11 +43,11 @@ data Event =
     }
   | ButtonsPressed
     { _pressPos :: MousePos
-    , _pressButton :: [Button]
+    , _pressButton :: Button
     }
   | ButtonsReleased
     { _releasePos :: MousePos
-    , _releaseButton :: [Button]
+    , _releaseButton :: Button
     }
   deriving (Show)
 

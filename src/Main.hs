@@ -8,6 +8,7 @@ module Main (main) where
 import Control.Concurrent
 import Control.Lens hiding (element)
 import Control.Monad
+import Data.Int
 import Foreign.C
 import Linear
 import Linear.Affine
@@ -126,21 +127,36 @@ updateInput event input =
                 Released -> modifyKyeboard $ Map.delete scanCode
               where scanCode = keysymScancode $ keyboardEventKeysym keyboardEvent
         MouseMotionEvent MouseMotionEventData{..} ->
-            modifyEvents ([MouseMove
-                (mousePosToV2 mouseMotionEventPos)
-                (fmap buttonToButton mouseMotionEventState)] ++)
+            setMousePos (mousePosToV2 mouseMotionEventPos) . modifyEvents .
+                maybe ([] ++) (constrMouseMove mouseMotionEventPos)
+                    . sequence $ fmap buttonToButton mouseMotionEventState
+        MouseButtonEvent MouseButtonEventData{..} ->
+            modifyEvents . maybe ([] ++)
+                (\b ->case mouseButtonEventMotion of
+                      Released -> constrMousePress mouseButtonEventPos b
+                      Pressed -> constrMouseRelease mouseButtonEventPos b
+                ) $ buttonToButton mouseButtonEventButton
         _ -> input
   where
-    buttonToButton :: MouseButton -> Button
-    buttonToButton = \case
-        ButtonLeft -> LeftButton
-        ButtonMiddle -> RightButton
-        ButtonRight -> MiddleButton
-        _ -> T.Unknown
+    constrMouseMove p b = ([MouseMove (mousePosToV2 p) b] ++)
+    constrMousePress p b = ([ButtonsPressed (mousePosToV2 p) b] ++)
+    constrMouseRelease p b = ([ButtonsReleased (mousePosToV2 p) b] ++)
 
+    buttonToButton :: MouseButton -> Maybe Button
+    buttonToButton = \case
+        ButtonLeft -> Just LeftButton
+        ButtonMiddle -> Just MiddleButton
+        ButtonRight -> Just RightButton
+        _ -> Nothing
+
+    mousePosToV2 :: Point V2 Int32 -> V2 Int
     mousePosToV2 (P vect) = fmap fromIntegral vect
+
     modifyKyeboard f = over (Types.properties . keyboard) f input
     modifyEvents f = over (events) f input
+
+    setMousePos :: V2 Int -> Input -> Input
+    setMousePos = set (T.properties . mousePos)
 
 pollInput :: MVar Input -> IO ()
 pollInput input = do
