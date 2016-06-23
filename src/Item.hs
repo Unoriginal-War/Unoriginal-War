@@ -1,27 +1,20 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Item
-    ( Sources(..)
-    , Features(..)
-    , Resources(..)
+    ( Building(..)
+    , BuildingDescription(..)
     , Position
     , Size
-    , Description(..)
     , Speed
-    , Item(..)
-    , ItemType(..)
-    , Properties(..)
     , RenderingInfo(..)
-    , State(..)
     , Action(..)
-    , Unit
-    , Building
+    , Unit(..)
+    , UnitDescription(..)
     )
 where
 
-import Data.Vector
+import Data.Hashable
 import Data.Word
+import GHC.Generics
 import Linear
 import SDL
 
@@ -30,48 +23,33 @@ type Position = V2 Float
 type Size = Word8
 type Speed = Float
 
-data Sources (a :: ItemType) = Sources
-    { textureFile :: FilePath
+data UnitDescription = UnitDescription
+    { unitSpeed :: Speed
+    , unitSize :: Size
+    , unitTexture :: FilePath
+    }
+  deriving (Eq, Generic)
+
+instance Hashable UnitDescription
+
+data Unit = Unit
+    { unitPosition :: Position
+    , unitPlan :: [Action]
+    , unitDescription :: UnitDescription
     }
 
-data family Features (a :: ItemType)
-data instance Features 'UnitType = UnitFeatures
-    { speed :: Speed
-    , size :: Size
+data BuildingDescription = BuildingDescription
+    { buildingSize :: Size
+    , buildingTexture :: FilePath
     }
-data instance Features 'BuildingType = BuildingFeatures
-    { bSize :: Size
-    }
+  deriving (Eq, Generic)
 
--- Handle loading stages to get rid of the Maybe.
-data Resources (a :: ItemType) = Resources
-    { texture :: Maybe Texture
-    }
+instance Hashable BuildingDescription
 
-data Description (a :: ItemType) = Description
-    { features :: Features a
-    , sources :: Sources a
+data Building = Building
+    { buildingPosition :: Position
+    , buildingDescription :: BuildingDescription
     }
-
-data family Properties (a :: ItemType)
-data instance Properties 'UnitType = UnitProperties
-    { position :: Position
-    , plan :: [Action]
-    }
-data instance Properties 'BuildingType = BuildingProperties
-    { bPosition :: Position
-    }
-
-data ItemType = UnitType | BuildingType
-
-
-data Item (a :: ItemType) = Item
-    { description :: Description a
-    , resources :: Resources a
-    , properties :: Properties a
-    }
-type Unit = Item 'UnitType
-type Building = Item 'BuildingType
 
 data RenderingInfo = RenderingInfo
     { rPosition :: Position
@@ -79,11 +57,5 @@ data RenderingInfo = RenderingInfo
     , rTexture :: Texture
     }
 
-
 data Action = MoveTo Position
-
-data State = State
-    { units :: Vector Unit
-    , buildings :: Vector Building
-    }
-
+  deriving (Eq)

@@ -9,6 +9,8 @@ import Control.Concurrent
 import Control.Lens hiding (element)
 import Control.Monad
 import Data.Int
+import qualified Data.Array.IArray as Array
+import qualified Data.HashMap.Strict as HashMap
 import Foreign.C
 import Linear
 import Linear.Affine
@@ -23,8 +25,11 @@ import SDL.Video (createWindow, defaultWindow, createRenderer)
 import SDL.Video.Renderer
 
 import Game
+import Grid
 import Item
 import Render
+import Resource
+import State
 import Time
 import Types hiding (Event)
 import qualified Types as T
@@ -36,11 +41,26 @@ main = do
     window <- createWindow "My SDL Application" defaultWindow
     renderer <- createRenderer window (-1) defaultRenderer
 
-    loadedUnits <- sequence $ Vector.map (loadTexture renderer size) units'
-    loadedBuildings <-
-        sequence $ Vector.map (loadTexture renderer bSize) buildings'
+    -- TODO proper loading
+    let unitDesc = unitDescription $ Vector.head units'
+    let buildingDesc = buildingDescription $ Vector.head buildings'
+    unitTex <- loadUnitTexture renderer unitDesc
+    buildingTex <- loadBuildingTexture renderer buildingDesc
 
-    state <- newMVar $ State loadedUnits loadedBuildings
+    state <- newMVar State
+        { units = units'
+        , buildings = buildings'
+        , grid = Grid
+            { verticalExtent = 10
+            , horizontalExtent = 10
+            , tiles = Array.array (0, 0) []
+            }
+        , store = Store
+            { units = HashMap.insert unitDesc unitTex HashMap.empty
+            , buildings = HashMap.insert buildingDesc buildingTex HashMap.empty
+            , tiles = HashMap.empty
+            }
+        }
     input <- newMVar emptyInput
 
     run renderDelta $ render renderer state
@@ -63,58 +83,37 @@ main = do
         iSize = CInt $ fromIntegral size'
         dSize = fromIntegral size'
 
-    loadTexture
-        :: Renderer
-        -> (Features a -> Size)
-        -> Item a
-        -> IO (Item a)
-    loadTexture renderer getSize u@Item{description} = do
-        texture <- makeTexture renderer size' name
-        pure u
-            { resources = Resources
-                { texture = Just texture
-                }
-            }
-      where
-        size' = getSize $ features description
-        name = textureFile $ sources description
+    loadUnitTexture :: Renderer -> UnitDescription -> IO Texture
+    loadUnitTexture renderer UnitDescription{..} =
+        makeTexture renderer unitSize unitTexture
+
+    loadBuildingTexture :: Renderer -> BuildingDescription -> IO Texture
+    loadBuildingTexture renderer BuildingDescription{..} =
+        makeTexture renderer buildingSize buildingTexture
 
     buildings' = Vector.fromList
-        [ Item
-            { description = Description
-                { features = BuildingFeatures 200
-                , sources = Sources
-                    { textureFile = "image/building.png"
-                    }
+        [ Building
+            { buildingDescription = BuildingDescription
+                { buildingSize = 200
+                , buildingTexture = "image/building.png"
                 }
-            , resources = Resources
-                { texture = Nothing
-                }
-            , Item.properties = BuildingProperties
-                { bPosition = V2 200 200
-                }
+            , buildingPosition = V2 200 200
             }
         ]
 
     units' = Vector.fromList
-        [ Item
-            { description = Description
-                { features = UnitFeatures 0.5 50
-                , sources = Sources
-                    { textureFile = "image/unit.png"
-                    }
+        [ Unit
+            { unitDescription = UnitDescription
+                { unitSpeed = 0.5
+                , unitSize = 50
+                , unitTexture = "image/unit.png"
                 }
-            , resources = Resources
-                { texture = Nothing
-                }
-            , Item.properties = UnitProperties
-                { position = V2 500 200
-                , plan = cycle
+                , unitPosition = V2 500 200
+                , unitPlan = cycle
                     [ MoveTo $ V2 200 400
                     , MoveTo $ V2 500 200
                     , MoveTo $ V2 500 500
                     ]
-                }
             }
         ]
 

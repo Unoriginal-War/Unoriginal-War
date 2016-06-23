@@ -21,7 +21,10 @@ executable unoriginal-war
   other-modules:
                 Game
                 Item
+                Grid
                 Render
+                Resource
+                State
                 Time
                 Types
 
@@ -29,12 +32,15 @@ executable unoriginal-war
 
   build-depends:
      base >=4.8 && <4.9
+   , array
    , containers
+   , hashable
    , lens
    , linear
    , sdl2
    , sdl2-cairo
    , time
+   , unordered-containers
    , vector
 
   hs-source-dirs:      src
