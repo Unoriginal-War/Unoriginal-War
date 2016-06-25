@@ -9,6 +9,8 @@ import Control.Concurrent
 import Control.Lens hiding (element)
 import Control.Monad
 import Data.Int
+import Data.Monoid
+import Data.Word
 import qualified Data.Array.IArray as Array
 import qualified Data.HashMap.Strict as HashMap
 import Foreign.C
@@ -133,13 +135,19 @@ updateInput event input =
             modifyEvents . maybe ([] ++)
                 (\b ->case mouseButtonEventMotion of
                       Released -> constrMousePress mouseButtonEventPos b
-                      Pressed -> constrMouseRelease mouseButtonEventPos b
+                      Pressed -> generateClicks mouseButtonEventPos b mouseButtonEventClicks . constrMouseRelease mouseButtonEventPos b
                 ) $ buttonToButton mouseButtonEventButton
         _ -> input
   where
-    constrMouseMove p b = ([MouseMove (mousePosToV2 p) b] ++)
-    constrMousePress p b = ([ButtonsPressed (mousePosToV2 p) b] ++)
-    constrMouseRelease p b = ([ButtonsReleased (mousePosToV2 p) b] ++)
+    constrMouseMove p b = ([MouseMove (mousePosToV2 p) b] <>)
+    constrMousePress p b = ([ButtonsPressed (mousePosToV2 p) b] <>)
+    constrMouseRelease p b = ([ButtonsReleased (mousePosToV2 p) b] <>)
+
+    generateClicks :: Point V2 Int32 -> Button -> Word8 -> [T.Event] -> [T.Event]
+    generateClicks p b = \case
+        1 -> ([MouseClicked (mousePosToV2 p) b] <>)
+        2 -> ([MouseDoubleClicked (mousePosToV2 p) b] <>)
+        _ -> ([] <>)
 
     buttonToButton :: MouseButton -> Maybe Button
     buttonToButton = \case
@@ -152,7 +160,7 @@ updateInput event input =
     mousePosToV2 (P vect) = fmap fromIntegral vect
 
     modifyKyeboard f = over (Types.properties . keyboard) f input
-    modifyEvents f = over (events) f input
+    modifyEvents f = over events f input
 
     setMousePos :: V2 Int -> Input -> Input
     setMousePos = set (T.properties . mousePos)

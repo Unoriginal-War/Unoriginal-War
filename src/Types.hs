@@ -49,6 +49,14 @@ data Event =
     { _releasePos :: MousePos
     , _releaseButton :: Button
     }
+  | MouseClicked
+    { _releasePos :: MousePos
+    , _releaseButton :: Button
+    }
+  | MouseDoubleClicked
+    { _releasePos :: MousePos
+    , _releaseButton :: Button
+    }
   deriving (Show)
 
 data Input = Input
