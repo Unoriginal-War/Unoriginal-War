@@ -1,21 +1,29 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
 module State
     ( Building
     , State(..)
     , Unit
+    , buildings
+    , grid
+    , store
+    , units
     )
 where
 
+import Control.Lens
 import Data.Vector
 
 import Item
 import Grid
-import Resource
+import Resource hiding (units, buildings)
 
 
 data State = State
-    { units :: Vector Unit
-    , buildings :: Vector Building
-    , grid :: Grid
-    , store :: Store
+    { _units :: Vector Unit
+    , _buildings :: Vector Building
+    , _grid :: Grid
+    , _store :: Store
     }
+
+makeLenses ''State

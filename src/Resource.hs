@@ -1,18 +1,24 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Resource
     ( BuildingResources
     , Store(..)
     , TileResources
     , UnitResources
+    , units
+    , buildings
+    , tiles
     )
 where
 
+import Control.Lens
 import Data.HashMap.Strict
 import SDL
 
 import Item
-import Grid
+import Grid hiding (tiles)
 
 {-
 
@@ -35,7 +41,9 @@ type TileResources = HashMap TileDescription Texture
 type UnitResources = HashMap UnitDescription Texture
 
 data Store = Store
-    { units :: UnitResources
-    , buildings :: BuildingResources
-    , tiles :: TileResources
+    { _units :: UnitResources
+    , _buildings :: BuildingResources
+    , _tiles :: TileResources
     }
+
+makeLenses ''Store

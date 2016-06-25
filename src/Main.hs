@@ -44,23 +44,23 @@ main = do
     renderer <- createRenderer window (-1) defaultRenderer
 
     -- TODO proper loading
-    let unitDesc = unitDescription $ Vector.head units'
-    let buildingDesc = buildingDescription $ Vector.head buildings'
+    let unitDesc = _unitDescription $ Vector.head units'
+    let buildingDesc = _buildingDescription $ Vector.head buildings'
     unitTex <- loadUnitTexture renderer unitDesc
     buildingTex <- loadBuildingTexture renderer buildingDesc
 
     state <- newMVar State
-        { units = units'
-        , buildings = buildings'
-        , grid = Grid
-            { verticalExtent = 10
-            , horizontalExtent = 10
-            , tiles = Array.array (0, 0) []
+        { _units = units'
+        , _buildings = buildings'
+        , _grid = Grid
+            { _verticalExtent = 10
+            , _horizontalExtent = 10
+            , _tiles = Array.array (0, 0) []
             }
-        , store = Store
-            { units = HashMap.insert unitDesc unitTex HashMap.empty
-            , buildings = HashMap.insert buildingDesc buildingTex HashMap.empty
-            , tiles = HashMap.empty
+        , _store = Store
+            { _units = HashMap.insert unitDesc unitTex HashMap.empty
+            , _buildings = HashMap.insert buildingDesc buildingTex HashMap.empty
+            , _tiles = HashMap.empty
             }
         }
     input <- newMVar emptyInput
@@ -87,31 +87,31 @@ main = do
 
     loadUnitTexture :: Renderer -> UnitDescription -> IO Texture
     loadUnitTexture renderer UnitDescription{..} =
-        makeTexture renderer unitSize unitTexture
+        makeTexture renderer _unitSize _unitTexture
 
     loadBuildingTexture :: Renderer -> BuildingDescription -> IO Texture
     loadBuildingTexture renderer BuildingDescription{..} =
-        makeTexture renderer buildingSize buildingTexture
+        makeTexture renderer _buildingSize _buildingTexture
 
     buildings' = Vector.fromList
         [ Building
-            { buildingDescription = BuildingDescription
-                { buildingSize = 200
-                , buildingTexture = "image/building.png"
+            { _buildingDescription = BuildingDescription
+                { _buildingSize = 200
+                , _buildingTexture = "image/building.png"
                 }
-            , buildingPosition = V2 200 200
+            , _buildingPosition = V2 200 200
             }
         ]
 
     units' = Vector.fromList
         [ Unit
-            { unitDescription = UnitDescription
-                { unitSpeed = 0.5
-                , unitSize = 50
-                , unitTexture = "image/unit.png"
+            { _unitDescription = UnitDescription
+                { _unitSpeed = 0.5
+                , _unitSize = 50
+                , _unitTexture = "image/unit.png"
                 }
-                , unitPosition = V2 500 200
-                , unitPlan = cycle
+                , _unitPosition = V2 500 200
+                , _unitPlan = cycle
                     [ MoveTo $ V2 200 400
                     , MoveTo $ V2 500 200
                     , MoveTo $ V2 500 500

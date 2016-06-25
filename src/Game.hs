@@ -16,11 +16,11 @@ import Types
 
 updateUnit :: Unit -> Unit
 updateUnit u@Unit{..} = u
-    { unitPosition = newPosition
-    , unitPlan = newPlan
+    { _unitPosition = newPosition
+    , _unitPlan = newPlan
     }
   where
-    (newPosition, newPlan) = carryOut unitPlan unitDescription unitPosition
+    (newPosition, newPlan) = carryOut _unitPlan _unitDescription _unitPosition
 
 carryOut :: [Action] -> UnitDescription -> Position -> (Position, [Action])
 carryOut (x:xs) features pos = case x of

@@ -25,37 +25,37 @@ makeRect (P (V2 x y)) h = Rectangle (P $ V2 (x - h) (y - h)) (V2 h h)
 
 -- FIXME do something better than fromJust...
 unitToInfo :: Resource.Store -> Unit -> RenderingInfo
-unitToInfo store Unit{..} = RenderingInfo
-    { rPosition = unitPosition
-    , rTexture = fromJust $ HashMap.lookup unitDescription (Resource.units store)
-    , rSize = unitSize unitDescription
+unitToInfo store' Unit{..} = RenderingInfo
+    { _rPosition = _unitPosition
+    , _rTexture = fromJust $ HashMap.lookup _unitDescription (Resource._units store')
+    , _rSize = _unitSize _unitDescription
     }
 
 buildingToInfo :: Resource.Store -> Building -> RenderingInfo
-buildingToInfo store Building{..} = RenderingInfo
-    { rPosition = buildingPosition
-    , rTexture = fromJust $ HashMap.lookup buildingDescription (Resource.buildings store)
-    , rSize = buildingSize buildingDescription
+buildingToInfo store' Building{..} = RenderingInfo
+    { _rPosition = _buildingPosition
+    , _rTexture = fromJust $ HashMap.lookup _buildingDescription (Resource._buildings store')
+    , _rSize = _buildingSize _buildingDescription
     }
 
 renderItem :: Renderer -> RenderingInfo -> IO ()
 renderItem renderer RenderingInfo{..} = do
     let toCInt = CInt . fromIntegral . myRound
-    let iPos = fmap toCInt rPosition
+    let iPos = fmap toCInt _rPosition
 
-    copy renderer rTexture Nothing (Just $ makeRect (P iPos) iSize)
+    copy renderer _rTexture Nothing (Just $ makeRect (P iPos) iSize)
   where
     myRound :: RealFrac a => a -> Integer
     myRound = round
 
-    iSize = CInt $ fromIntegral rSize
+    iSize = CInt $ fromIntegral _rSize
 
 render :: Renderer -> MVar State -> IO ()
 render renderer state = do
     s <- readMVar state
 
-    let unitsInfo = Vector.map (unitToInfo $ store s) (units s)
-    let buildingsInfo = Vector.map (buildingToInfo $ store s) (buildings s)
+    let unitsInfo = Vector.map (unitToInfo $ _store s) (_units s)
+    let buildingsInfo = Vector.map (buildingToInfo $ _store s) (_buildings s)
 
     -- Debug unit positions
     -- forM_ (units s) $ \unit -> print $ unitPosition unit
