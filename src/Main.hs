@@ -9,6 +9,7 @@ import Control.Concurrent
 import Control.Lens hiding (element)
 import Control.Monad
 import Data.Int
+import Data.IORef
 import Data.Monoid
 import Data.Word
 import qualified Data.Array.IArray as Array
@@ -63,7 +64,7 @@ main = do
             , _tiles = HashMap.empty
             }
         }
-    input <- newMVar emptyInput
+    input <- newIORef emptyInput
 
     run renderDelta $ render renderer state
     run gameDelta $ game input state
@@ -119,8 +120,8 @@ main = do
             }
         ]
 
-updateInput :: Event -> Input -> Input
-updateInput event input =
+updateInput :: KeyboardModifiers -> Event -> Input -> Input
+updateInput km event input =
     case eventPayload event of
         KeyboardEvent keyboardEvent ->
             case keyboardEventKeyMotion keyboardEvent of
@@ -134,19 +135,24 @@ updateInput event input =
         MouseButtonEvent MouseButtonEventData{..} ->
             modifyEvents . maybe ([] ++)
                 (\b ->case mouseButtonEventMotion of
-                      Released -> constrMousePress mouseButtonEventPos b
-                      Pressed -> generateClicks mouseButtonEventPos b mouseButtonEventClicks . constrMouseRelease mouseButtonEventPos b
+                      Pressed -> constrMousePress mouseButtonEventPos b
+                      Released -> generateClicks mouseButtonEventPos b mouseButtonEventClicks . constrMouseRelease mouseButtonEventPos b
                 ) $ buttonToButton mouseButtonEventButton
         _ -> input
   where
-    constrMouseMove p b = ([MouseMove (mousePosToV2 p) b] <>)
-    constrMousePress p b = ([ButtonsPressed (mousePosToV2 p) b] <>)
-    constrMouseRelease p b = ([ButtonsReleased (mousePosToV2 p) b] <>)
+    constrMouseMove p b = ([MouseMove (mousePosToV2 p) b km] <>)
+    constrMousePress p b = ([ButtonsPressed (mousePosToV2 p) b km] <>)
+    constrMouseRelease p b = ([ButtonsReleased (mousePosToV2 p) b km] <>)
 
-    generateClicks :: Point V2 Int32 -> Button -> Word8 -> [T.Event] -> [T.Event]
+    generateClicks
+        :: Point V2 Int32
+        -> Button
+        -> Word8
+        -> [T.Event]
+        -> [T.Event]
     generateClicks p b = \case
-        1 -> ([MouseClicked (mousePosToV2 p) b] <>)
-        2 -> ([MouseDoubleClicked (mousePosToV2 p) b] <>)
+        1 -> ([MouseClicked (mousePosToV2 p) b km] <>)
+        2 -> ([MouseDoubleClicked (mousePosToV2 p) b km] <>)
         _ -> ([] <>)
 
     buttonToButton :: MouseButton -> Maybe Button
@@ -165,13 +171,36 @@ updateInput event input =
     setMousePos :: V2 Int -> Input -> Input
     setMousePos = set (T.properties . mousePos)
 
-pollInput :: MVar Input -> IO ()
+
+pollInput :: IORef Input -> IO ()
 pollInput input = do
     es <- pollEvents
-    let update = foldl comp id es
-    modifyMVar_ input (return . update)
+    km <- fmap sdlKeyModifierToKeyboardModifier getModState
+    let update = makeIORefTouple . foldl (comp km) id es
+    -- Rely only on the mvarModification may be dangerous !!!
+    -- Nobody is promising as that the value will be presented in the MVar in
+    -- the first place, but most importunely the modifyMVar may not be atomic!!!
+    -- See: https://hackage.haskell.org/package/base-4.9.0.0/docs/Control-Concurrent-MVar.html#v:modifyMVar
+    atomicModifyIORef' input (update)
   where
-    comp up ev = updateInput ev . up
+    comp km up ev = updateInput km ev . up
+    makeIORefTouple v = (v,())
+
+    sdlKeyModifierToKeyboardModifier :: KeyModifier -> KeyboardModifiers
+    sdlKeyModifierToKeyboardModifier KeyModifier{..} = KeyboardModifiers
+        { _leftShift = keyModifierLeftShift
+        , _rightShift = keyModifierRightShift
+        , _leftCtrl = keyModifierLeftCtrl
+        , _rightCtrl = keyModifierRightCtrl
+        , _leftAlt = keyModifierLeftAlt
+        , _rightAlt = keyModifierRightAlt
+        , _leftGUI = keyModifierLeftGUI
+        , _rightGUI = keyModifierRightGUI
+        , _numLock = keyModifierNumLock
+        , _capsLock = keyModifierCapsLock
+        , _altGr = keyModifierAltGr
+        }
+
 {-
 
 Architecture:
