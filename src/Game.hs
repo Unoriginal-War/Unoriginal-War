@@ -9,6 +9,7 @@ where
 import Control.Concurrent
 import Control.Lens
 import Data.IORef
+import Data.Monoid
 import Linear
 import qualified Data.Vector as Vector
 
@@ -42,8 +43,14 @@ processInputs :: Properties -> Event -> State -> State
 processInputs _ e s =
     case e of
         MouseClicked{..} -> case _clickButton of
-            RightButton -> set (units . ix 0 . unitPlan)
-                ([MoveTo (fmap fromIntegral _clickPos)]) s
+            RightButton ->
+                case _leftShift _clickKeyModifiers of
+                    True ->
+                        over (units . ix 0 . unitPlan)
+                        (\l -> l <> [MoveTo (fmap fromIntegral _clickPos)] ) s
+                    False ->
+                        set (units . ix 0 . unitPlan)
+                        ([MoveTo (fmap fromIntegral _clickPos)]) s
             _ -> s
         MouseDoubleClicked{..} -> s
         _ -> s
