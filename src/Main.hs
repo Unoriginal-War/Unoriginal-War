@@ -107,7 +107,7 @@ main = do
     units' = Vector.fromList
         [ Unit
             { _unitDescription = UnitDescription
-                { _unitSpeed = 0.5
+                { _unitSpeed = 0.2
                 , _unitSize = 50
                 , _unitTexture = "image/unit.png"
                 }
