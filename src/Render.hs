@@ -18,6 +18,7 @@ import SDL.Video.Renderer
 import Item
 import qualified Resource
 import State
+import ViewPort
 
 
 makeRect :: (Num a) => Point V2 a -> a -> Rectangle a
@@ -38,24 +39,24 @@ buildingToInfo store' Building{..} = RenderingInfo
     , _rSize = _buildingSize _buildingDescription
     }
 
-renderItem :: Renderer -> RenderingInfo -> IO ()
-renderItem renderer RenderingInfo{..} = do
-    let toCInt = CInt . fromIntegral . myRound
-    let iPos = fmap toCInt _rPosition
-
+renderItem :: Renderer -> ViewPort -> RenderingInfo -> IO ()
+renderItem renderer ViewPort{..} RenderingInfo{..} = do
     copy renderer _rTexture Nothing (Just $ makeRect (P iPos) iSize)
   where
     myRound :: RealFrac a => a -> Integer
     myRound = round
 
+    transformToViewPort i = (fmap toInt i) - _position
+    toInt = fromIntegral . myRound
+    iPos = fmap fromIntegral $ transformToViewPort _rPosition
     iSize = CInt $ fromIntegral _rSize
 
 render :: Renderer -> MVar State -> IO ()
 render renderer state = do
-    s <- readMVar state
+    State{..} <- readMVar state
 
-    let unitsInfo = Vector.map (unitToInfo $ _store s) (_units s)
-    let buildingsInfo = Vector.map (buildingToInfo $ _store s) (_buildings s)
+    let unitsInfo = Vector.map (unitToInfo $ _store) _units
+    let buildingsInfo = Vector.map (buildingToInfo $ _store) _buildings
 
     -- Debug unit positions
     -- forM_ (units s) $ \unit -> print $ unitPosition unit
@@ -63,7 +64,7 @@ render renderer state = do
     rendererDrawColor renderer $= V4 0 0 0 255
     clear renderer
 
-    sequence_ $ Vector.map (renderItem renderer) (unitsInfo <> buildingsInfo)
+    sequence_ $ Vector.map (renderItem renderer _viewPort) (unitsInfo <> buildingsInfo)
 
     present renderer
 

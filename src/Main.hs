@@ -36,6 +36,7 @@ import State
 import Time
 import Types hiding (Event)
 import qualified Types as T
+import qualified ViewPort as VP
 
 
 main :: IO ()
@@ -62,6 +63,11 @@ main = do
             { _units = HashMap.insert unitDesc unitTex HashMap.empty
             , _buildings = HashMap.insert buildingDesc buildingTex HashMap.empty
             , _tiles = HashMap.empty
+            }
+        , _mapSize = V2 1200 1200
+        , _viewPort = VP.ViewPort
+            { VP._size = V2 800 600
+            , VP._position = V2 0 0
             }
         }
     input <- newIORef emptyInput
@@ -101,6 +107,13 @@ main = do
                 , _buildingTexture = "image/building.png"
                 }
             , _buildingPosition = V2 200 200
+            }
+        , Building
+            { _buildingDescription = BuildingDescription
+                { _buildingSize = 200
+                , _buildingTexture = "image/building.png"
+                }
+            , _buildingPosition = V2 900 900
             }
         ]
 
